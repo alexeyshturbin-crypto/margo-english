@@ -119,6 +119,11 @@ html, body {
   border-radius: 14px; background: var(--card); font-family: inherit; color: var(--ink);
 }
 .field input[type=range] { width: 100%; accent-color: var(--brand); }
+.voice-sel {
+  width: 100%; padding: 14px; font-size: 16px; border: 1px solid var(--line);
+  border-radius: 14px; background: var(--card); color: var(--ink); font-family: inherit;
+  -webkit-appearance: none; appearance: none;
+}
 
 .seg { display: flex; gap: 8px; }
 .seg button {

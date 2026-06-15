@@ -19,6 +19,7 @@
     todayDate: null,
     todayXp: 0,
     dailyGoal: 30,          // XP в день — аналог "цели" в Duolingo
+    voiceURI: "",           // выбранный пользователем голос озвучки
     srs: {},                // { cardId: { box: 1..5, due: "YYYY-MM-DD" } }
     stats: { reading: 0, listening: 0, grammar: 0, vocab: 0, topic: 0 },
   });
@@ -83,26 +84,63 @@
 
   /* ---------- Озвучка (Web Speech API / TTS) --------------------------- */
   let voices = [];
+  // Самые «дикторские», натуральные голоса (Apple/Google/Microsoft).
+  // Чем выше в списке — тем выше приоритет.
+  const PREFERRED = [
+    "Serena", "Stephanie", "Kate", "Daniel", "Oliver", "Jamie",      // en-GB (Apple enhanced)
+    "Ava", "Samantha", "Allison", "Nicky", "Evan", "Tom", "Zoe",     // en-US (Apple enhanced)
+    "Karen", "Lee", "Catherine", "James",                            // en-AU
+    "Google UK English Female", "Google UK English Male", "Google US English",
+    "Microsoft Sonia", "Microsoft Libby", "Microsoft Aria", "Microsoft Ryan", "Microsoft Jenny",
+  ];
+
+  function enVoices() { return voices.filter(v => /^en/i.test(v.lang || "")); }
   function loadVoices() {
-    voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    voices = window.speechSynthesis ? (window.speechSynthesis.getVoices() || []) : [];
+  }
+  function scoreVoice(v) {
+    let s = 0;
+    const name = v.name || "";
+    const idx = PREFERRED.findIndex(p => name.toLowerCase().includes(p.toLowerCase()));
+    if (idx >= 0) s += (PREFERRED.length - idx) * 10;
+    if (/enhanced|premium|natural|neural|siri/i.test(name)) s += 60;   // студийное качество
+    if (/compact|eloquence|reed|fred|albert|zarvox|trinoids|whisper|bahh|bells|boing|jester|organ|cellos|wobble|superstar/i.test(name)) s -= 200; // роботизированные
+    if (/en[-_]GB/i.test(v.lang)) s += 8;                              // британский — ближе к учебникам
+    else if (/en[-_]US/i.test(v.lang)) s += 5;
+    if (v.localService) s += 3;
+    return s;
+  }
+  function pickBestVoice(overrideURI) {
+    const list = enVoices();
+    if (!list.length) return null;
+    const uri = overrideURI || state.voiceURI;
+    if (uri) {
+      const chosen = list.find(v => v.voiceURI === uri);
+      if (chosen) return chosen;
+    }
+    return list.slice().sort((a, b) => scoreVoice(b) - scoreVoice(a))[0];
   }
   if (window.speechSynthesis) {
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }
-  function speak(text, rate = 0.95) {
-    if (!window.speechSynthesis) {
-      alert("Озвучка не поддерживается в этом браузере.");
-      return;
-    }
+
+  // Читаем по предложениям — естественные паузы и стабильность на iOS.
+  function splitSentences(text) {
+    return (String(text).match(/[^.!?]+[.!?]*\s*/g) || [text]).map(s => s.trim()).filter(Boolean);
+  }
+  function speak(text, rate = 0.9, overrideURI) {
+    if (!window.speechSynthesis) { alert("Озвучка не поддерживается в этом браузере."); return; }
     window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "en-GB";
-    u.rate = rate;
-    const enVoice = voices.find(v => /en[-_]GB/i.test(v.lang)) ||
-                    voices.find(v => /^en/i.test(v.lang));
-    if (enVoice) u.voice = enVoice;
-    window.speechSynthesis.speak(u);
+    if (!voices.length) loadVoices();
+    const voice = pickBestVoice(overrideURI);
+    splitSentences(text).forEach(part => {
+      const u = new SpeechSynthesisUtterance(part);
+      if (voice) { u.voice = voice; u.lang = voice.lang; } else { u.lang = "en-GB"; }
+      u.rate = rate;     // чуть медленнее обычного — для чёткости и обучения
+      u.pitch = 1.0;     // натуральный тон, без «бочки»
+      window.speechSynthesis.speak(u);
+    });
   }
   function stopSpeak() {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
@@ -786,6 +824,12 @@
           <span>Дневная цель (XP): <b id="goalVal">${state.dailyGoal}</b></span>
           <input id="goalInput" type="range" min="10" max="100" step="5" value="${state.dailyGoal}">
         </label>
+        <div class="field">
+          <span>🎙️ Голос озвучки</span>
+          <select id="voiceSel" class="voice-sel"></select>
+          <button class="btn-ghost wide" id="voiceTest" style="margin-top:8px">🔊 Прослушать пример</button>
+        </div>
+        <p class="tiny-note">📲 <b>Лучший дикторский голос на iPhone</b> (бесплатно): Настройки → Универсальный доступ → Устный контент → Голоса → English → выбери голос (например «Serena», «Ava», «Daniel») и нажми загрузку. Версии с пометкой <b>Enhanced/Premium</b> звучат как живой диктор. Потом выбери его здесь в списке.</p>
         <button class="btn-primary big" id="saveBtn">Сохранить</button>
         <button class="btn-ghost wide" id="resetBtn">Сбросить весь прогресс</button>
         <p class="tiny-note">Прогресс хранится только на этом телефоне (localStorage). Чтобы добавить иконку на экран: Safari → «Поделиться» → «На экран Домой».</p>
@@ -802,10 +846,33 @@
     });
     const goalInput = view.querySelector("#goalInput");
     goalInput.oninput = () => view.querySelector("#goalVal").textContent = goalInput.value;
+
+    // --- Выбор голоса озвучки ---
+    const voiceSel = view.querySelector("#voiceSel");
+    const fillVoices = () => {
+      const list = enVoices().slice().sort((a, b) => scoreVoice(b) - scoreVoice(a));
+      if (!list.length) {
+        voiceSel.innerHTML = `<option value="">Голоса загружаются… (потяни экран / переоткрой)</option>`;
+        return;
+      }
+      const best = pickBestVoice();
+      voiceSel.innerHTML =
+        `<option value="">Авто — лучший доступный${best ? " (" + esc(best.name) + ")" : ""}</option>` +
+        list.map(v => {
+          const nice = /enhanced|premium|natural|neural|siri/i.test(v.name) ? " ⭐" : "";
+          return `<option value="${esc(v.voiceURI)}" ${v.voiceURI === state.voiceURI ? "selected" : ""}>${esc(v.name)} · ${esc(v.lang)}${nice}</option>`;
+        }).join("");
+    };
+    fillVoices();
+    if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { loadVoices(); fillVoices(); };
+    view.querySelector("#voiceTest").onclick = () =>
+      speak("Hello! This is how your reading voice sounds. Let's learn English together.", 0.9, voiceSel.value);
+
     view.querySelector("#saveBtn").onclick = () => {
       state.name = view.querySelector("#nameInput").value.trim() || state.name;
       state.level = lvl;
       state.dailyGoal = +goalInput.value;
+      state.voiceURI = voiceSel.value || "";
       save(); toast("Сохранено ✓"); go("home");
     };
     view.querySelector("#resetBtn").onclick = () => {
