@@ -186,6 +186,16 @@ html, body {
 .audio-controls button { padding: 12px 14px; font-size: 15px; }
 .listen-box { background: var(--card); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 12px; }
 
+/* подсветка предложения при чтении («караоке») */
+.sent { transition: background .15s; border-radius: 4px; }
+.sent-active { background: #fde68a; color: #1f2433; box-shadow: 0 0 0 3px #fde68a; }
+
+/* регулятор скорости −/+ */
+.speed-ctl { display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 2px 4px; }
+.spd-btn { width: 34px; height: 34px; border: none; background: var(--bg); color: var(--ink); border-radius: 9px; font-size: 20px; font-weight: 800; cursor: pointer; line-height: 1; }
+.spd-btn:active { background: var(--brand); color: #fff; }
+.spd-val { min-width: 50px; text-align: center; font-weight: 700; font-size: 14px; color: var(--muted); }
+
 /* ---------- Вопросы (radio) ---------- */
 .qform { display: flex; flex-direction: column; gap: 14px; }
 .qcard {

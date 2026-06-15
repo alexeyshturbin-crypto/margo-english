@@ -20,6 +20,7 @@
     todayXp: 0,
     dailyGoal: 30,          // XP в день — аналог "цели" в Duolingo
     voiceURI: "",           // выбранный пользователем голос озвучки
+    speed: 1.0,             // скорость озвучки (0.5–1.5)
     srs: {},                // { cardId: { box: 1..5, due: "YYYY-MM-DD" } }
     drafts: {},             // { writingId: "текст черновика" }
     stats: { reading: 0, listening: 0, grammar: 0, vocab: 0, topic: 0, phonetics: 0, writing: 0 },
@@ -133,11 +134,12 @@
   function splitSentences(text) {
     return (String(text).match(/[^.!?]+[.!?]*\s*/g) || [text]).map(s => s.trim()).filter(Boolean);
   }
-  // --- Встроенная («запечённая») озвучка: натуральный нейроголос (Piper),
+  // --- Встроенная («запечённая») озвучка: натуральный нейроголос,
   //     одинаково чистый на любом телефоне, работает офлайн. Главный путь. ---
   let currentAudio = null;
+  let speechToken = 0;   // инвалидация текущего воспроизведения/последовательности
   function audioNorm(s) { return String(s).trim().toLowerCase().replace(/\s+/g, " "); }
-  function audioHash(s) { // FNV-1a 32-bit — совпадает с генератором tools_gen_audio.py
+  function audioHash(s) { // FNV-1a 32-bit — совпадает с генератором озвучки
     let h = 0x811c9dc5;
     for (let i = 0; i < s.length; i++) { h ^= (s.charCodeAt(i) & 0xffff); h = Math.imul(h, 0x01000193) >>> 0; }
     return ("0000000" + h.toString(16)).slice(-8);
@@ -145,42 +147,99 @@
   function bakedSrc(text) {
     if (!window.AUDIO || !window.AUDIO.has) return null;
     const key = audioHash(audioNorm(text));
-    return window.AUDIO.has[key] ? ("audio/" + key + "." + (window.AUDIO.ext || "wav")) : null;
+    return window.AUDIO.has[key] ? ("audio/" + key + "." + (window.AUDIO.ext || "mp3")) : null;
   }
+  function getSpeed() { return state.speed || 1.0; }
+  function clampRate(r) { return Math.max(0.5, Math.min(1.6, r || 1.0)); }
 
-  function speak(text, rate = 1.0, overrideURI) {
+  // Озвучка одного фрагмента: запечённое аудио → иначе браузерный синтез.
+  function speak(text, rate, overrideURI) {
     stopSpeak();
+    const token = speechToken;
+    const r = clampRate(rate || getSpeed());
     const src = bakedSrc(text);
     if (src) {
       const a = new Audio(src);
       try { a.preservesPitch = true; a.mozPreservesPitch = true; a.webkitPreservesPitch = true; } catch (e) {}
-      a.playbackRate = (rate && rate < 0.8) ? 0.75 : 1.0;   // «медленно» — чуть замедляем без искажения
-      currentAudio = a;
-      a.play().catch(() => webSpeak(text, rate, overrideURI)); // нет файла/офлайн без кэша → синтез
+      a.playbackRate = r; currentAudio = a;
+      a.play().catch(() => { if (token === speechToken) webSpeakOne(text, r, null, overrideURI); });
       return;
     }
-    webSpeak(text, rate, overrideURI);
+    webSpeakOne(text, r, null, overrideURI);
   }
 
-  // Запасной путь — браузерный синтез (если запечённого аудио нет).
-  function webSpeak(text, rate, overrideURI) {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
+  // Чтение по предложениям с подсветкой текущего предложения («караоке»).
+  function playSentences(spans, sentences) {
+    stopSpeak();
+    const token = speechToken;
+    let i = 0;
+    const clearHl = () => spans.forEach(s => s && s.classList.remove("sent-active"));
+    const step = () => {
+      if (token !== speechToken) return;
+      if (i >= sentences.length) { clearHl(); return; }
+      clearHl();
+      const span = spans[i];
+      if (span) { span.classList.add("sent-active"); span.scrollIntoView({ behavior: "smooth", block: "center" }); }
+      const r = clampRate(getSpeed());
+      const next = () => { if (token === speechToken) { i++; step(); } };
+      const src = bakedSrc(sentences[i]);
+      if (src) {
+        const a = new Audio(src);
+        try { a.preservesPitch = true; a.mozPreservesPitch = true; a.webkitPreservesPitch = true; } catch (e) {}
+        a.playbackRate = r; currentAudio = a;
+        a.onended = next;
+        a.onerror = () => webSpeakOne(sentences[i], r, next);
+        a.play().catch(() => webSpeakOne(sentences[i], r, next));
+      } else {
+        webSpeakOne(sentences[i], r, next);
+      }
+    };
+    step();
+  }
+
+  // Браузерный синтез одного предложения (запасной путь, с колбэком завершения).
+  function webSpeakOne(text, rate, cb, overrideURI) {
+    if (!window.speechSynthesis) { if (cb) cb(); return; }
+    const token = speechToken;
     if (!voices.length) loadVoices();
     const voice = pickBestVoice(overrideURI);
-    splitSentences(text).forEach(part => {
-      const u = new SpeechSynthesisUtterance(part);
-      if (voice) { u.voice = voice; u.lang = voice.lang; } else { u.lang = "en-GB"; }
-      u.rate = (rate && rate < 1) ? rate : 0.92;
-      u.pitch = 1.0;
-      window.speechSynthesis.speak(u);
-    });
+    const u = new SpeechSynthesisUtterance(text);
+    if (voice) { u.voice = voice; u.lang = voice.lang; } else { u.lang = "en-GB"; }
+    u.rate = clampRate(rate); u.pitch = 1.0;
+    u.onend = () => { if (cb && token === speechToken) cb(); };
+    u.onerror = () => { if (cb && token === speechToken) cb(); };
+    window.speechSynthesis.speak(u);
   }
 
   function stopSpeak() {
+    speechToken++;
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (currentAudio) { try { currentAudio.pause(); } catch (e) {} currentAudio = null; }
+    document.querySelectorAll(".sent-active").forEach(s => s.classList.remove("sent-active"));
   }
+
+  // Регулятор скорости (−/+) для чтения/аудирования.
+  function speedControlHTML() {
+    return `<div class="speed-ctl">
+        <button class="spd-btn" data-spd="-">−</button>
+        <span class="spd-val" id="spdVal">${getSpeed().toFixed(2)}×</span>
+        <button class="spd-btn" data-spd="+">+</button>
+      </div>`;
+  }
+  function wireSpeed(scope, onChange) {
+    const val = scope.querySelector("#spdVal");
+    scope.querySelectorAll(".spd-btn").forEach(b => {
+      b.onclick = () => {
+        let s = getSpeed() + (b.dataset.spd === "+" ? 0.1 : -0.1);
+        s = Math.round(Math.max(0.5, Math.min(1.5, s)) * 100) / 100;
+        state.speed = s; save();
+        if (val) val.textContent = s.toFixed(2) + "×";
+        if (onChange) onChange(s);
+      };
+    });
+  }
+  // защита состояния
+  if (typeof state.speed !== "number") { state.speed = 1.0; }
 
   /* ---------- Маленькие помощники для разметки ------------------------- */
   const el = (html) => {
@@ -399,22 +458,24 @@
 
   function openReading(item, level, listenMode) {
     app.innerHTML = "";
+    const sentences = splitSentences(item.text);
+    const spansHTML = sentences.map((s, i) => `<span class="sent" data-i="${i}">${esc(s)} </span>`).join("");
+
+    const controls = `
+      <div class="audio-controls">
+        <button class="btn-primary" id="playBtn">▶︎ ${listenMode ? "Слушать" : "Озвучить"}</button>
+        <button class="btn-ghost" id="stopBtn">⏹ Стоп</button>
+        ${speedControlHTML()}
+      </div>`;
+
     const textBlock = listenMode
       ? `<div class="listen-box">
-           <p class="hint-line">Сначала послушай текст (можно несколько раз), потом ответь на вопросы. Текст скрыт.</p>
-           <div class="audio-controls">
-             <button class="btn-primary" id="playBtn">▶︎ Слушать</button>
-             <button class="btn-ghost" id="slowBtn">🐢 Медленно</button>
-             <button class="btn-ghost" id="stopBtn">⏹ Стоп</button>
-           </div>
+           <p class="hint-line">Послушай текст (можно несколько раз и менять скорость −/+), потом ответь на вопросы. Текст скрыт — открой кнопкой ниже.</p>
+           ${controls}
            <button class="btn-ghost wide" id="revealBtn">👁 Показать текст</button>
-           <div class="reading-text hidden" id="textReveal">${esc(item.text)}</div>
+           <div class="reading-text hidden" id="rtext">${spansHTML}</div>
          </div>`
-      : `<div class="reading-text">${esc(item.text)}</div>
-         <div class="audio-controls">
-           <button class="btn-ghost" id="playBtn">🔊 Озвучить</button>
-           <button class="btn-ghost" id="stopBtn">⏹ Стоп</button>
-         </div>`;
+      : `<div class="reading-text" id="rtext">${spansHTML}</div>${controls}`;
 
     const view = el(`
       <div class="screen">
@@ -427,14 +488,12 @@
     app.appendChild(view);
     wire(view);
 
-    const playBtn = view.querySelector("#playBtn");
-    if (playBtn) playBtn.onclick = () => speak(item.text, 0.95);
-    const slowBtn = view.querySelector("#slowBtn");
-    if (slowBtn) slowBtn.onclick = () => speak(item.text, 0.7);
-    const stopBtn = view.querySelector("#stopBtn");
-    if (stopBtn) stopBtn.onclick = stopSpeak;
+    const spans = Array.from(view.querySelectorAll("#rtext .sent"));
+    view.querySelector("#playBtn").onclick = () => playSentences(spans, sentences);
+    view.querySelector("#stopBtn").onclick = stopSpeak;
+    wireSpeed(view);
     const revealBtn = view.querySelector("#revealBtn");
-    if (revealBtn) revealBtn.onclick = () => view.querySelector("#textReveal").classList.toggle("hidden");
+    if (revealBtn) revealBtn.onclick = () => view.querySelector("#rtext").classList.toggle("hidden");
 
     const form = view.querySelector("#qform");
     item.questions.forEach((q, qi) => {

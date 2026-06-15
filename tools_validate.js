@@ -1,11 +1,17 @@
 /* Сквозная валидация всего контента (запуск: node tools_validate.js). */
 global.window = {};
 const _l = console.log; console.log = () => {};
-require("./content.js");
-require("./content_extra.js");
-["grammar", "reading", "vocab", "phrasal_idioms", "phonetics", "writing", "topiccheck"]
-  .forEach(f => require("./content_" + f + ".js"));
+const fs = require("fs");
+// Динамически грузим все файлы контента в правильном порядке.
+const files = fs.readdirSync(__dirname)
+  .filter(f => /^content.*\.js$/.test(f))
+  .sort((a, b) => {
+    const rank = (x) => x === "content.js" ? 0 : x === "content_extra.js" ? 1 : 2;
+    return rank(a) - rank(b) || a.localeCompare(b);
+  });
+files.forEach(f => require("./" + f));
 console.log = _l;
+_l("загружено файлов контента:", files.length);
 
 const C = window.CONTENT;
 const LEVELS = ["A2", "B1", "B2", "C1", "C2"];
