@@ -1,6 +1,6 @@
 /* Service Worker — офлайн-кэш для MyEnglish.
    При обновлении контента поменяй версию CACHE, чтобы телефон скачал новое. */
-const CACHE = "myenglish-v4";
+const CACHE = "myenglish-v5";
 const ASSETS = [
   "./",
   "./index.html",
@@ -8,6 +8,7 @@ const ASSETS = [
   "./curriculum.js",
   "./content.js",
   "./content_extra.js",
+  "./audio_manifest.js",
   "./app.js",
   "./manifest.json",
   "./icons/icon-192.png",

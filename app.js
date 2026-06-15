@@ -129,21 +129,53 @@
   function splitSentences(text) {
     return (String(text).match(/[^.!?]+[.!?]*\s*/g) || [text]).map(s => s.trim()).filter(Boolean);
   }
-  function speak(text, rate = 0.9, overrideURI) {
-    if (!window.speechSynthesis) { alert("Озвучка не поддерживается в этом браузере."); return; }
+  // --- Встроенная («запечённая») озвучка: натуральный нейроголос (Piper),
+  //     одинаково чистый на любом телефоне, работает офлайн. Главный путь. ---
+  let currentAudio = null;
+  function audioNorm(s) { return String(s).trim().toLowerCase().replace(/\s+/g, " "); }
+  function audioHash(s) { // FNV-1a 32-bit — совпадает с генератором tools_gen_audio.py
+    let h = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) { h ^= (s.charCodeAt(i) & 0xffff); h = Math.imul(h, 0x01000193) >>> 0; }
+    return ("0000000" + h.toString(16)).slice(-8);
+  }
+  function bakedSrc(text) {
+    if (!window.AUDIO || !window.AUDIO.has) return null;
+    const key = audioHash(audioNorm(text));
+    return window.AUDIO.has[key] ? ("audio/" + key + "." + (window.AUDIO.ext || "wav")) : null;
+  }
+
+  function speak(text, rate = 1.0, overrideURI) {
+    stopSpeak();
+    const src = bakedSrc(text);
+    if (src) {
+      const a = new Audio(src);
+      try { a.preservesPitch = true; a.mozPreservesPitch = true; a.webkitPreservesPitch = true; } catch (e) {}
+      a.playbackRate = (rate && rate < 0.8) ? 0.75 : 1.0;   // «медленно» — чуть замедляем без искажения
+      currentAudio = a;
+      a.play().catch(() => webSpeak(text, rate, overrideURI)); // нет файла/офлайн без кэша → синтез
+      return;
+    }
+    webSpeak(text, rate, overrideURI);
+  }
+
+  // Запасной путь — браузерный синтез (если запечённого аудио нет).
+  function webSpeak(text, rate, overrideURI) {
+    if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     if (!voices.length) loadVoices();
     const voice = pickBestVoice(overrideURI);
     splitSentences(text).forEach(part => {
       const u = new SpeechSynthesisUtterance(part);
       if (voice) { u.voice = voice; u.lang = voice.lang; } else { u.lang = "en-GB"; }
-      u.rate = rate;     // чуть медленнее обычного — для чёткости и обучения
-      u.pitch = 1.0;     // натуральный тон, без «бочки»
+      u.rate = (rate && rate < 1) ? rate : 0.92;
+      u.pitch = 1.0;
       window.speechSynthesis.speak(u);
     });
   }
+
   function stopSpeak() {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (currentAudio) { try { currentAudio.pause(); } catch (e) {} currentAudio = null; }
   }
 
   /* ---------- Маленькие помощники для разметки ------------------------- */
@@ -825,11 +857,10 @@
           <input id="goalInput" type="range" min="10" max="100" step="5" value="${state.dailyGoal}">
         </label>
         <div class="field">
-          <span>🎙️ Голос озвучки</span>
-          <select id="voiceSel" class="voice-sel"></select>
-          <button class="btn-ghost wide" id="voiceTest" style="margin-top:8px">🔊 Прослушать пример</button>
+          <span>🎙️ Озвучка</span>
+          <button class="btn-ghost wide" id="voiceTest">🔊 Прослушать пример голоса</button>
         </div>
-        <p class="tiny-note">📲 <b>Лучший дикторский голос на iPhone</b> (бесплатно): Настройки → Универсальный доступ → Устный контент → Голоса → English → выбери голос (например «Serena», «Ava», «Daniel») и нажми загрузку. Версии с пометкой <b>Enhanced/Premium</b> звучат как живой диктор. Потом выбери его здесь в списке.</p>
+        <p class="tiny-note">🎧 Голос <b>встроен в приложение</b> (натуральный, студийный) и работает офлайн — ничего скачивать или настраивать не нужно.</p>
         <button class="btn-primary big" id="saveBtn">Сохранить</button>
         <button class="btn-ghost wide" id="resetBtn">Сбросить весь прогресс</button>
         <p class="tiny-note">Прогресс хранится только на этом телефоне (localStorage). Чтобы добавить иконку на экран: Safari → «Поделиться» → «На экран Домой».</p>
@@ -847,32 +878,14 @@
     const goalInput = view.querySelector("#goalInput");
     goalInput.oninput = () => view.querySelector("#goalVal").textContent = goalInput.value;
 
-    // --- Выбор голоса озвучки ---
-    const voiceSel = view.querySelector("#voiceSel");
-    const fillVoices = () => {
-      const list = enVoices().slice().sort((a, b) => scoreVoice(b) - scoreVoice(a));
-      if (!list.length) {
-        voiceSel.innerHTML = `<option value="">Голоса загружаются… (потяни экран / переоткрой)</option>`;
-        return;
-      }
-      const best = pickBestVoice();
-      voiceSel.innerHTML =
-        `<option value="">Авто — лучший доступный${best ? " (" + esc(best.name) + ")" : ""}</option>` +
-        list.map(v => {
-          const nice = /enhanced|premium|natural|neural|siri/i.test(v.name) ? " ⭐" : "";
-          return `<option value="${esc(v.voiceURI)}" ${v.voiceURI === state.voiceURI ? "selected" : ""}>${esc(v.name)} · ${esc(v.lang)}${nice}</option>`;
-        }).join("");
-    };
-    fillVoices();
-    if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { loadVoices(); fillVoices(); };
+    // --- Прослушать пример встроенного голоса ---
     view.querySelector("#voiceTest").onclick = () =>
-      speak("Hello! This is how your reading voice sounds. Let's learn English together.", 0.9, voiceSel.value);
+      speak("Hello! This is how your reading voice sounds. Let's learn English together.", 1.0);
 
     view.querySelector("#saveBtn").onclick = () => {
       state.name = view.querySelector("#nameInput").value.trim() || state.name;
       state.level = lvl;
       state.dailyGoal = +goalInput.value;
-      state.voiceURI = voiceSel.value || "";
       save(); toast("Сохранено ✓"); go("home");
     };
     view.querySelector("#resetBtn").onclick = () => {
