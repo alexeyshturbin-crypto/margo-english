@@ -104,7 +104,7 @@
     const idx = PREFERRED.findIndex(p => name.toLowerCase().includes(p.toLowerCase()));
     if (idx >= 0) s += (PREFERRED.length - idx) * 10;
     if (/enhanced|premium|natural|neural|siri/i.test(name)) s += 60;   // студийное качество
-    if (/compact|eloquence|reed|fred|albert|zarvox|trinoids|whisper|bahh|bells|boing|jester|organ|cellos|wobble|superstar/i.test(name)) s -= 200; // роботизированные
+    if (/compact|eloquence|fred|albert|zarvox|trinoids|whisper|bahh|bells|boing|jester|organ|cellos|wobble|superstar|grandma|grandpa|rocko|bubbles|junior|kathy|ralph|deranged|hysterical|bad news|good news|pipe|sandy|shelley|flo|eddy|reed/i.test(name)) s -= 200; // роботизированные / мультяшные / новелти
     if (/en[-_]GB/i.test(v.lang)) s += 8;                              // британский — ближе к учебникам
     else if (/en[-_]US/i.test(v.lang)) s += 5;
     if (v.localService) s += 3;
