@@ -21,7 +21,8 @@
     dailyGoal: 30,          // XP в день — аналог "цели" в Duolingo
     voiceURI: "",           // выбранный пользователем голос озвучки
     srs: {},                // { cardId: { box: 1..5, due: "YYYY-MM-DD" } }
-    stats: { reading: 0, listening: 0, grammar: 0, vocab: 0, topic: 0 },
+    drafts: {},             // { writingId: "текст черновика" }
+    stats: { reading: 0, listening: 0, grammar: 0, vocab: 0, topic: 0, phonetics: 0, writing: 0 },
   });
 
   let state = load();
@@ -76,8 +77,11 @@
 
   /* ---------- Навигация ------------------------------------------------ */
   const app = document.getElementById("app");
+  let activeInterval = null;   // таймер текущего экрана (Writing) — чистим при переходе
 
   function go(screen, params) {
+    if (activeInterval) { clearInterval(activeInterval); activeInterval = null; }
+    stopSpeak();
     window.scrollTo(0, 0);
     routes[screen](params || {});
   }
@@ -304,6 +308,9 @@
           <button class="menu-card c7" data-go="phrasal">
             <span class="mc-emoji">🔗</span><span class="mc-title">Фразовые<br>и идиомы</span>
             <span class="mc-sub">Phrasal verbs</span></button>
+          <button class="menu-card c9" data-go="writing">
+            <span class="mc-emoji">✍️</span><span class="mc-title">Письмо</span>
+            <span class="mc-sub">Эссе IELTS · Task 1/2</span></button>
           <button class="menu-card c8" data-go="topic">
             <span class="mc-emoji">✅</span><span class="mc-title">Проверка темы</span>
             <span class="mc-sub">Мини-тест</span></button>
@@ -795,11 +802,103 @@
     wire(view);
   };
 
+  /* ---------- ПИСЬМО / WRITING (IELTS Task 1 & 2) ---------------------- */
+  routes.writing = () => {
+    levelPicker("Письмо", (lvl) => {
+      const items = (CONTENT.writing[lvl] || []);
+      lessonList("Письмо", items, lvl, (it) => openWriting(it, lvl), it => it.type);
+    });
+  };
+
+  function countWords(t) { const m = String(t).trim().match(/\S+/g); return m ? m.length : 0; }
+
+  function openWriting(item, level) {
+    app.innerHTML = "";
+    const draft = (state.drafts && state.drafts[item.id]) || "";
+    const tips = item.tips.map(t => `<li>${esc(t)}</li>`).join("");
+    const phrases = item.phrases.map(p => `<li class="book-item">${esc(p)}</li>`).join("");
+    const checklist = item.checklist.map(c => `<label class="opt"><input type="checkbox"><span>${esc(c)}</span></label>`).join("");
+
+    const view = el(`
+      <div class="screen">
+        ${header(item.type, true)}
+        <div class="writing-task">${esc(item.prompt)}</div>
+        <div class="writing-meta">
+          <span>🎯 мин. слов: <b>${item.minWords}</b></span>
+          <span>⏱ <b id="timer">${item.minutes}:00</b></span>
+          <button class="btn-ghost" id="timerBtn">▶︎ Старт</button>
+        </div>
+
+        <details class="acc"><summary>💡 План и советы</summary><ul class="tips">${tips}</ul></details>
+        <details class="acc"><summary>🧩 Полезные фразы</summary><ul class="book-list">${phrases}</ul></details>
+
+        <textarea id="essay" class="essay" placeholder="Пиши здесь свой ответ на английском…">${esc(draft)}</textarea>
+        <div class="writing-meta">
+          <span>Слов: <b id="wc">0</b> / ${item.minWords}</span>
+          <button class="btn-ghost" id="saveDraft">💾 Сохранить</button>
+        </div>
+
+        <details class="acc"><summary>✅ Чек-лист самопроверки</summary><div class="qform" style="margin-top:10px">${checklist}</div></details>
+        <details class="acc"><summary>📄 Показать образец ответа</summary><div class="reading-text" style="white-space:pre-wrap;margin-top:10px">${esc(item.model)}</div></details>
+
+        <button class="btn-primary big" id="doneBtn">Готово</button>
+      </div>`);
+    app.appendChild(view); wire(view);
+
+    const essay = view.querySelector("#essay");
+    const wc = view.querySelector("#wc");
+    const upd = () => { wc.textContent = countWords(essay.value); };
+    essay.oninput = upd; upd();
+
+    // автосохранение черновика
+    let saveT = null;
+    essay.addEventListener("input", () => {
+      if (saveT) clearTimeout(saveT);
+      saveT = setTimeout(() => { state.drafts[item.id] = essay.value; save(); }, 800);
+    });
+    view.querySelector("#saveDraft").onclick = () => { state.drafts[item.id] = essay.value; save(); toast("Черновик сохранён 💾"); };
+
+    // таймер (как на реальном экзамене)
+    let remaining = item.minutes * 60, running = false;
+    const tEl = view.querySelector("#timer"), tBtn = view.querySelector("#timerBtn");
+    const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    tBtn.onclick = () => {
+      if (running) { clearInterval(activeInterval); activeInterval = null; running = false; tBtn.textContent = "▶︎ Продолжить"; return; }
+      running = true; tBtn.textContent = "⏸ Пауза";
+      activeInterval = setInterval(() => {
+        remaining--; tEl.textContent = fmt(remaining);
+        if (remaining <= 0) { clearInterval(activeInterval); activeInterval = null; running = false; tBtn.textContent = "▶︎ Старт"; tEl.textContent = "0:00"; toast("Время вышло! ⏰"); }
+      }, 1000);
+    };
+
+    view.querySelector("#doneBtn").onclick = () => {
+      const words = countWords(essay.value);
+      state.drafts[item.id] = essay.value; save();
+      if (words < item.minWords) { toast(`Нужно ещё минимум ${item.minWords - words} слов`); return; }
+      if (activeInterval) { clearInterval(activeInterval); activeInterval = null; }
+      addXp(15); bumpStat("writing");
+      showResultSimple(view, "✍️", "Отличная работа!", `Ты написал(а) ${words} слов. Сравни свой текст с образцом и пройдись по чек-листу.`, 15);
+    };
+  }
+
+  function showResultSimple(view, emoji, title, text, gained) {
+    const b = el(`<div class="result-banner">
+      <div class="result-emoji">${emoji}</div>
+      <h2>${esc(title)}</h2>
+      <p>${esc(text)}</p>
+      <p class="xp-gain">+${gained} XP</p>
+      <button class="btn-primary big" id="homeBtnX">На главную</button></div>`);
+    view.appendChild(b);
+    b.scrollIntoView({ behavior: "smooth", block: "center" });
+    b.querySelector("#homeBtnX").onclick = () => go("home");
+    toast(`+${gained} XP 🔥`);
+  }
+
   /* ---------- ПРОГРЕСС -------------------------------------------------- */
   routes.progress = () => {
     app.innerHTML = "";
     const s = state.stats;
-    const totalActs = s.reading + s.listening + s.grammar + s.vocab + s.topic;
+    const totalActs = s.reading + s.listening + s.grammar + s.vocab + s.topic + (s.phonetics || 0) + (s.writing || 0);
     const view = el(`
       <div class="screen">
         ${header("Прогресс", true)}
@@ -814,6 +913,8 @@
           <li>🎧 Аудирование <b>${s.listening}</b></li>
           <li>✏️ Грамматика <b>${s.grammar}</b></li>
           <li>🃏 Слова <b>${s.vocab}</b></li>
+          <li>🗣️ Фонетика <b>${s.phonetics || 0}</b></li>
+          <li>✍️ Письмо <b>${s.writing || 0}</b></li>
           <li>✅ Проверки тем <b>${s.topic}</b></li>
         </ul>
         <h2 class="section-title">Слова к повторению</h2>

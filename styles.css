@@ -91,6 +91,30 @@ html, body {
 .c6 { background: linear-gradient(135deg, #00b8d9, #46d6ec); }
 .c7 { background: linear-gradient(135deg, #ec4899, #f472b6); }
 .c8 { background: linear-gradient(135deg, #475569, #64748b); }
+.c9 { background: linear-gradient(135deg, #0ea5a4, #2dd4bf); }
+
+/* ---------- Письмо / Writing ---------- */
+.writing-task {
+  background: #eef1fb; border-left: 4px solid var(--brand); border-radius: 12px;
+  padding: 14px; font-size: 15px; white-space: pre-wrap; line-height: 1.5; margin-bottom: 12px;
+}
+.writing-meta {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  font-size: 14px; color: var(--muted); margin: 10px 0;
+}
+.writing-meta button { padding: 8px 14px; font-size: 14px; }
+.acc { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 4px 14px; margin-bottom: 10px; }
+.acc summary { cursor: pointer; font-weight: 700; font-size: 15px; padding: 10px 0; list-style: none; }
+.acc summary::-webkit-details-marker { display: none; }
+.acc summary::before { content: "▸ "; color: var(--brand); }
+.acc[open] summary::before { content: "▾ "; }
+.acc .tips { margin: 0 0 12px; padding-left: 20px; font-size: 14px; color: var(--muted); }
+.acc .tips li { margin-bottom: 6px; }
+.essay {
+  width: 100%; min-height: 220px; padding: 14px; font-size: 16px; line-height: 1.6;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--ink);
+  font-family: inherit; resize: vertical;
+}
 
 .book-note, .tiny-note {
   font-size: 13px; color: var(--muted); margin-top: 18px;
@@ -273,7 +297,7 @@ html, body {
     --bg: #14161f; --card: #1e2130; --ink: #eceef5; --muted: #9aa0b4;
     --line: #2c2f42; --shadow: 0 6px 20px rgba(0,0,0,.3);
   }
-  .book-note, .tiny-note, .murphy-line { background: #232743; }
+  .book-note, .tiny-note, .murphy-line, .writing-task { background: #232743; }
   .book-item { background: #232743; }
   .gap-input { background: #2a2e45; }
   .streak-badge { background: #3a2c14; color: #f5a623; }

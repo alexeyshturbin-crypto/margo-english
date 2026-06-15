@@ -215,5 +215,112 @@
     },
   ]);
 
+  /* ---------------- ПИСЬМО / WRITING (IELTS Task 1 & Task 2) ----------------
+     Источник-ориентир: Collins Writing for IELTS, Official Cambridge Guide to IELTS.
+     Тренажёр: задание + план + полезные фразы + чек-лист + образец для сравнения. */
+  C.writing = {
+    B1: [
+      {
+        id: "w-b1-email", type: "Письмо другу", minWords: 100, minutes: 20,
+        prompt: "Your English-speaking friend is going to visit your city next month. Write an email to your friend. In your email:\n• say how you feel about the visit\n• suggest what you can do together\n• tell your friend what clothes to bring.",
+        tips: [
+          "Начни с приветствия: Hi Anna, / Dear Tom,",
+          "Раздели письмо на абзацы — по одному на каждый пункт задания.",
+          "Используй неформальный стиль: сокращения (I'm, we'll), простые связки.",
+          "Закончи фразой прощания: See you soon! / Best wishes, + имя.",
+        ],
+        phrases: [
+          "I'm so excited that you're coming!", "I can't wait to see you.",
+          "How about visiting…?", "We could also go to…",
+          "Don't forget to bring…", "Make sure you pack…",
+          "Let me know if…", "See you soon!",
+        ],
+        checklist: [
+          "Есть приветствие и подпись?", "Раскрыты все 3 пункта задания?",
+          "Текст разбит на абзацы?", "Не меньше 100 слов?",
+          "Проверил(а) времена и артикли?",
+        ],
+        model: "Hi Anna,\n\nI'm so happy that you're coming to visit me next month — I can't wait to see you! It feels like ages since we last met.\n\nWhile you're here, we could do lots of fun things together. How about visiting the old town and the art museum? We could also go to my favourite café by the river, which has amazing cakes. If the weather is nice, we might even go cycling in the park.\n\nOne more thing: please pack some warm clothes and a light jacket, because the evenings can get quite cold here. Comfortable shoes are a good idea too, as we'll be walking a lot.\n\nLet me know your arrival time and I'll meet you at the station. See you very soon!\n\nBest wishes,\nMargo",
+      },
+    ],
+    B2: [
+      {
+        id: "w-b2-letter", type: "IELTS GT · Письмо (Task 1)", minWords: 150, minutes: 20,
+        prompt: "You recently bought a piece of equipment for your home but it did not work properly. Write a letter to the shop. In your letter:\n• describe the problem with the equipment\n• explain what happened when you contacted the shop\n• say what you would like the shop to do.",
+        tips: [
+          "Полуформальный стиль: Dear Sir or Madam, … Yours faithfully,",
+          "Один абзац = один пункт задания (3 абзаца + вступление).",
+          "Чётко укажи, чего ты хочешь: refund / replacement / repair.",
+          "150+ слов, нейтральный вежливый тон.",
+        ],
+        phrases: [
+          "I am writing to complain about…", "I purchased … on (date).",
+          "Unfortunately, the … stopped working after…",
+          "When I contacted your store, I was told that…",
+          "I am extremely dissatisfied with…",
+          "I would be grateful if you could…", "I look forward to your prompt reply.",
+          "Yours faithfully,",
+        ],
+        checklist: [
+          "Правильное обращение и подпись (faithfully, если 'Sir/Madam')?",
+          "Раскрыты все 3 пункта?", "Понятно, какого решения ты ждёшь?",
+          "Не меньше 150 слов?", "Вежливый формальный тон выдержан?",
+        ],
+        model: "Dear Sir or Madam,\n\nI am writing to complain about a coffee machine that I purchased from your store on 3 May.\n\nUnfortunately, the machine stopped working only a week after I bought it. It switches on, but no water comes through, and it now makes a loud noise that it did not make at first. As the product is still under warranty, I expected it to last much longer.\n\nWhen I contacted your store by phone, I was told that someone would call me back to arrange a repair. However, two weeks have now passed and I have not received any response, which I find very disappointing.\n\nGiven these circumstances, I would be grateful if you could either replace the machine with a new one or provide a full refund. I would also appreciate a clear explanation of how you intend to resolve this matter.\n\nI look forward to your prompt reply.\n\nYours faithfully,\nMargo Shturbina",
+      },
+      {
+        id: "w-b2-essay", type: "IELTS · Эссе (Task 2)", minWords: 250, minutes: 40,
+        prompt: "Some people think that students should be allowed to use mobile phones in school. Others believe that phones should be banned during lessons. Discuss both views and give your own opinion.",
+        tips: [
+          "Структура: вступление → абзац 'за' → абзац 'против' → твоё мнение → вывод.",
+          "В каждом абзаце: idea → explanation → example.",
+          "Используй связки: On the one hand, … On the other hand, … In my view, …",
+          "250+ слов, формальный стиль, без сокращений (do not вместо don't).",
+        ],
+        phrases: [
+          "It is often argued that…", "On the one hand, …",
+          "Supporters of this view claim that…", "On the other hand, …",
+          "However, opponents point out that…", "For instance, …",
+          "In my opinion, …", "To conclude, … / In conclusion, …",
+        ],
+        checklist: [
+          "Есть вступление с перефразированной темой?",
+          "Раскрыты ОБА мнения + твоё собственное?",
+          "Каждый абзац с примером?", "Есть вывод?",
+          "Не меньше 250 слов? Формальный стиль?",
+        ],
+        model: "The use of mobile phones in schools is a topic that often divides opinion. While some people believe that phones can be valuable learning tools, others argue that they should be banned during lessons. This essay will discuss both sides before giving my own view.\n\nOn the one hand, supporters of mobile phones claim that they can enhance learning. Students can quickly look up information, use educational apps, and access online dictionaries during lessons. For example, a student who does not understand a word can find its meaning instantly instead of interrupting the teacher. Phones can also help learners who are absent to keep up through shared notes and messages.\n\nOn the other hand, opponents point out that phones are a major source of distraction. Notifications from social media and games can easily draw students' attention away from their studies. Furthermore, phones may be used for cheating during tests, which is unfair to other students and undermines the value of exams.\n\nIn my opinion, phones should be allowed but only under clear rules. Teachers could permit their use for specific tasks while requiring them to be switched off at other times. This approach combines the educational benefits of technology with the discipline that effective learning requires.\n\nTo conclude, although mobile phones carry certain risks, a balanced policy of controlled use is, in my view, the most sensible solution for modern schools.",
+      },
+    ],
+    C1: [
+      {
+        id: "w-c1-essay", type: "IELTS · Эссе (Task 2, advanced)", minWords: 250, minutes: 40,
+        prompt: "Some people believe that it is the responsibility of individuals to protect the environment, while others argue that this should be the job of governments. To what extent do you agree or disagree?",
+        tips: [
+          "Заяви чёткую позицию во вступлении и держи её до конца.",
+          "Используй продвинутые связки: Admittedly, … Nevertheless, … Consequently, …",
+          "Покажи диапазон лексики и сложных структур (инверсия, условные, cleft).",
+          "Избегай клише — приводи конкретные, аргументированные примеры.",
+        ],
+        phrases: [
+          "It is sometimes claimed that…", "Admittedly, …",
+          "Nevertheless, it would be naïve to assume that…",
+          "A compelling argument in favour of … is that…",
+          "Not only … but also …", "This, in turn, leads to…",
+          "On balance, I am firmly of the view that…",
+          "In light of the above, …",
+        ],
+        checklist: [
+          "Чёткая позиция с самого начала и до вывода?",
+          "Аргументы развиты глубоко, а не перечислены?",
+          "Разнообразие лексики и сложных конструкций?",
+          "Точные связки между абзацами?",
+          "250+ слов, академический регистр?",
+        ],
+        model: "The question of who bears responsibility for protecting the environment — individuals or governments — is increasingly debated. While personal action undoubtedly matters, I would argue that meaningful environmental protection depends primarily on governments, with individuals playing a supporting role.\n\nAdmittedly, individual choices are far from trivial. When millions of people reduce their consumption, recycle, and choose sustainable transport, the cumulative effect can be significant. Such behaviour also shapes markets, since companies respond to what consumers demand. In this sense, personal responsibility cannot be dismissed.\n\nNevertheless, it would be naïve to assume that individual effort alone can address problems of this scale. The most damaging sources of pollution — heavy industry, energy production, and large-scale agriculture — lie well beyond the control of ordinary citizens. Only governments possess the legislative power to impose emissions limits, tax polluters, and invest in renewable infrastructure. A compelling argument in favour of state action is that it creates the framework within which individual choices become both possible and meaningful; without affordable public transport, for instance, urging people to abandon their cars achieves little.\n\nOn balance, I am firmly of the view that, although individuals should act responsibly, the decisive role must be played by governments. Personal effort and political will are not mutually exclusive; rather, the former flourishes only when the latter provides the necessary conditions. In light of the above, environmental policy should focus first on robust regulation, supported by, but not replaced by, individual responsibility.",
+      },
+    ],
+  };
+
   console.log("[MyEnglish] content_extra.js загружен — программа расширена.");
 })();
