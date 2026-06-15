@@ -1,6 +1,6 @@
 /* Service Worker — офлайн-кэш для MyEnglish.
    При обновлении контента поменяй версию CACHE, чтобы телефон скачал новое. */
-const CACHE = "myenglish-v9";
+const CACHE = "myenglish-v10";
 const ASSETS = [
   "./",
   "./index.html",
@@ -39,6 +39,16 @@ const ASSETS = [
   "./content_vocab_w3_B2.js",
   "./content_vocab_w3_C1.js",
   "./content_vocab_w3_C2.js",
+  "./content_reading_w4_A2.js",
+  "./content_reading_w4_B1.js",
+  "./content_reading_w4_B2.js",
+  "./content_reading_w4_C1.js",
+  "./content_reading_w4_C2.js",
+  "./content_vocab_w4_A2.js",
+  "./content_vocab_w4_B1.js",
+  "./content_vocab_w4_B2.js",
+  "./content_vocab_w4_C1.js",
+  "./content_vocab_w4_C2.js",
   "./audio_manifest.js",
   "./app.js",
   "./manifest.json",
