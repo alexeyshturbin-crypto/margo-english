@@ -10,9 +10,12 @@ console.log = _log;
 const C = window.CONTENT;
 const set = new Set();
 const add = (s) => { if (s && typeof s === "string") { const n = s.trim(); if (n) set.add(n); } };
+// тот же разбиватель предложений, что и в app.js (для «караоке»-озвучки)
+const splitSentences = (text) =>
+  (String(text).match(/[^.!?]+[.!?]*\s*/g) || [text]).map((s) => s.trim()).filter(Boolean);
 
 ["B1", "B2", "C1"].forEach((L) => {
-  (C.reading[L] || []).forEach((r) => add(r.text));
+  (C.reading[L] || []).forEach((r) => { add(r.text); splitSentences(r.text).forEach(add); });
   (C.vocab[L] || []).forEach((v) => add(v.en));
   (C.phrasal[L] || []).forEach((v) => add(v.en));
   (C.idioms[L] || []).forEach((v) => add(v.en));

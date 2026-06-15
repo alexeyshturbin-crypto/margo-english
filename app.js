@@ -232,10 +232,12 @@
         </label>
         <div class="field">
           <span>С какого уровня начнём?</span>
-          <div class="seg" id="levelSeg">
+          <div class="seg seg5" id="levelSeg">
+            <button data-lvl="A2">A2</button>
             <button data-lvl="B1" class="active">B1</button>
             <button data-lvl="B2">B2</button>
             <button data-lvl="C1">C1</button>
+            <button data-lvl="C2">C2</button>
           </div>
         </div>
         <button class="btn-primary big" id="startBtn">Начать 🚀</button>
@@ -332,17 +334,25 @@
   };
 
   /* ---------- Выбор уровня перед активностью --------------------------- */
+  // Уровни курса (5 лет): A2 → C2, с привязкой к классам
+  const LEVELS = [
+    { id: "A2", grade: "7 класс · базовый" },
+    { id: "B1", grade: "8 класс · средний" },
+    { id: "B2", grade: "9–10 класс · уверенный" },
+    { id: "C1", grade: "11 класс · продвинутый" },
+    { id: "C2", grade: "сертификат · свободный" },
+  ];
+
   function levelPicker(title, onPick) {
     app.innerHTML = "";
+    const rows = LEVELS.map(L =>
+      `<button class="level-row" data-lvl="${L.id}"><strong>${L.id}</strong> · ${L.grade} <span>${state.level === L.id ? "твой" : ""}</span></button>`
+    ).join("");
     const view = el(`
       <div class="screen">
         ${header(title, true)}
         <p class="hint-line">Выбери уровень задания:</p>
-        <div class="level-list">
-          <button class="level-row" data-lvl="B1"><strong>B1</strong> · базовый+ <span>${state.level === "B1" ? "твой" : ""}</span></button>
-          <button class="level-row" data-lvl="B2"><strong>B2</strong> · средний+ <span>${state.level === "B2" ? "твой" : ""}</span></button>
-          <button class="level-row" data-lvl="C1"><strong>C1</strong> · продвинутый <span>${state.level === "C1" ? "твой" : ""}</span></button>
-        </div>
+        <div class="level-list">${rows}</div>
       </div>`);
     app.appendChild(view);
     wire(view);
@@ -459,7 +469,7 @@
     levelPicker("Грамматика", (lvl) => {
       const items = (CONTENT.grammar[lvl] || []);
       lessonList("Грамматика", items, lvl, (it) => openGrammar(it, lvl),
-        it => `${it.title}  ·  Murphy ${it.murphy}`);
+        it => `${it.title}  ·  ${it.murphy}`);
     });
   };
 
@@ -471,7 +481,7 @@
     const view = el(`
       <div class="screen">
         ${header(item.title, true)}
-        <p class="murphy-line">📕 Murphy: <strong>${esc(item.murphy)}</strong> · тема: ${esc(item.topic)}</p>
+        <p class="murphy-line">📕 <strong>${esc(item.murphy)}</strong> · тема: ${esc(item.topic)}</p>
         <form id="gform" class="gform"></form>
         <button class="btn-primary big" id="checkBtn">Проверить</button>
       </div>`);
@@ -947,10 +957,12 @@
         </label>
         <div class="field">
           <span>Основной уровень</span>
-          <div class="seg" id="levelSeg">
+          <div class="seg seg5" id="levelSeg">
+            <button data-lvl="A2" class="${state.level === "A2" ? "active" : ""}">A2</button>
             <button data-lvl="B1" class="${state.level === "B1" ? "active" : ""}">B1</button>
             <button data-lvl="B2" class="${state.level === "B2" ? "active" : ""}">B2</button>
             <button data-lvl="C1" class="${state.level === "C1" ? "active" : ""}">C1</button>
+            <button data-lvl="C2" class="${state.level === "C2" ? "active" : ""}">C2</button>
           </div>
         </div>
         <label class="field">
